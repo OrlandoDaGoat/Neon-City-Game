@@ -49,6 +49,29 @@ window.addEventListener('keyup', (e) => {
     if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
 });
 
+let targetX = null;
+
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    targetX = (e.clientX - rect.left) * scaleX - (CAR_WIDTH / 2);
+});
+
+canvas.addEventListener('mouseleave', () => {
+    targetX = null;
+});
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    targetX = (e.touches[0].clientX - rect.left) * scaleX - (CAR_WIDTH / 2);
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => {
+    targetX = null;
+});
+
 class Player {
     constructor() {
         this.width = CAR_WIDTH;
@@ -59,12 +82,28 @@ class Player {
     }
 
     update() {
+        let movedWithKeyboard = false;
+
         if ((keys.ArrowLeft || keys.a) && this.x > 0) {
             this.x -= this.speed;
+            movedWithKeyboard = true;
         }
         if ((keys.ArrowRight || keys.d) && this.x + this.width < canvas.width) {
             this.x += this.speed;
+            movedWithKeyboard = true;
         }
+
+        if (!movedWithKeyboard && targetX !== null) {
+            // Smoothly move towards mouse/touch target
+            if (Math.abs(targetX - this.x) > this.speed) {
+                this.x += (targetX > this.x) ? this.speed : -this.speed;
+            } else {
+                this.x = targetX;
+            }
+        }
+
+        // Keep car within canvas bounds
+        this.x = Math.max(0, Math.min(canvas.width - this.width, this.x));
     }
 
     draw() {
