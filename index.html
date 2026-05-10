@@ -20,8 +20,9 @@
             <!-- Start Menu -->
             <div id="start-menu" class="menu-panel">
                 <h1 class="glitch" data-text="NEON RUNNER">NEON RUNNER</h1>
-                <p style="font-size: 11px; margin-top: -15px; margin-bottom: 15px; color: #888;">(Actually you're driving not running but runner sounds more cool)</p>
+                <p style="font-size: 14px; margin-top: -10px; margin-bottom: 20px; color: #888; font-weight: bold;">(Actually you're driving not running but runner sounds more cool)</p>
                 <p class="high-score-text">High Score: <span id="start-high-score">0</span></p>
+                
                 <div class="map-selection">
                     <label for="map-select">Select Map:</label>
                     <select id="map-select">
@@ -29,24 +30,69 @@
                         <option value="miami">Miami Beach</option>
                         <option value="race_track">Race Track</option>
                         <option value="tron">Tron</option>
+                        <option value="rainbow">Rainbow Road</option>
                     </select>
                 </div>
+                <button class="btn btn-hs" onclick="toggleHSModal(true)">VIEW HIGH SCORES</button>
                 <p class="diff-text">Select Difficulty</p>
                 <div class="button-group">
                     <button class="btn btn-easy" onclick="startGame('easy')">EASY</button>
                     <button class="btn btn-medium" onclick="startGame('medium')">MEDIUM</button>
                     <button class="btn btn-hard" onclick="startGame('hard')">HARD</button>
+                    <button class="btn btn-insane" onclick="startGame('insane')" style="background: linear-gradient(45deg, #ff0000, #ff00ff); border: 2px solid #fff; text-shadow: 0 0 10px #fff;">INSANE</button>
                 </div>
             </div>
 
             <!-- Game Over Menu -->
             <div id="game-over-menu" class="menu-panel hidden">
                 <h1 class="glitch text-red" data-text="CRASHED">CRASHED</h1>
+                <div id="insane-loser-content" class="hidden">
+                    <img src="assets/trollface.png" alt="You Lose" style="width: 200px; margin: 10px auto; display: block;">
+                </div>
+                <div id="easy-loser-content" class="hidden">
+                    <img src="assets/sad_baby.png" alt="You Lose" style="width: 200px; margin: 10px auto; display: block; border-radius: 8px; border: 2px solid #fff;">
+                </div>
+                <div id="medium-loser-content" class="hidden">
+                    <img src="assets/medium_speed.png" alt="You Lose" style="width: 200px; margin: 10px auto; display: block; border-radius: 8px; border: 2px solid #fff;">
+                </div>
+                <div id="hard-loser-content" class="hidden">
+                    <img src="assets/hard_snoop.png" alt="You Lose" style="width: 200px; margin: 10px auto; display: block; border-radius: 8px; border: 2px solid #fff;">
+                </div>
                 <p id="crash-message" class="crash-text">YOU'RE TRASH!</p>
                 <p>Final Score: <span id="final-score">0</span></p>
                 <p class="high-score-text">High Score: <span id="game-over-high-score">0</span></p>
                 <div class="button-group">
                     <button class="btn btn-retry" onclick="showMainMenu()">MAIN MENU</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Jumpscare Overlay -->
+        <div id="jumpscare-overlay" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; z-index: 9999; display: flex; align-items: center; justify-content: center;">
+            <img src="assets/jumpscare.jpg" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+        <audio id="scream-asset" src="assets/scream.mp3" preload="auto"></audio>
+
+        <!-- High Scores Modal (Troll Edition) -->
+        <div id="hs-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+            <div class="menu-panel" style="width: 350px;">
+                <div id="hs-view-screen">
+                    <h2 class="glitch" data-text="RECORDS" style="margin-bottom: 20px;">RECORDS</h2>
+                    <div class="high-scores-list" style="margin-bottom: 30px;">
+                        <div class="score-row"><span>Easy:</span> <span id="hs-easy">0</span></div>
+                        <div class="score-row"><span>Medium:</span> <span id="hs-medium">0</span></div>
+                        <div class="score-row"><span>Hard:</span> <span id="hs-hard">0</span></div>
+                        <div class="score-row" style="color: #ff00ff; font-weight: bold;"><span>Insane:</span> <span id="hs-insane">0</span></div>
+                    </div>
+                    <button class="btn btn-retry" onclick="toggleHSModal(false)" style="width: 100%; margin-bottom: 10px;">BACK</button>
+                    <button class="btn" style="width: 100%; font-size: 12px; border-color: #444; color: #444;" onclick="startResetFlow()">RESET SCORES</button>
+                </div>
+
+                <div id="hs-reset-screen" class="hidden">
+                    <p id="reset-prompt" style="font-size: 16px; min-height: 80px; display: flex; align-items: center; justify-content: center;">Are you sure?</p>
+                    <div id="reset-buttons" class="button-group">
+                        <!-- Dynamic Buttons -->
+                    </div>
                 </div>
             </div>
         </div>

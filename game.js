@@ -15,6 +15,33 @@ playerImg.src = 'assets/player_car.png';
 const enemyImg = new Image();
 enemyImg.src = 'assets/enemy_car.png';
 
+// Processed images for solid look without black background
+let processedPlayer = null;
+let processedEnemy = null;
+
+function processImage(img) {
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = img.width;
+    tempCanvas.height = img.height;
+    tempCtx.drawImage(img, 0, 0);
+    
+    const imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+    const data = imgData.data;
+    
+    for (let i = 0; i < data.length; i += 4) {
+        // If pixel is very close to black, make it transparent
+        if (data[i] < 20 && data[i+1] < 20 && data[i+2] < 20) {
+            data[i+3] = 0;
+        }
+    }
+    tempCtx.putImageData(imgData, 0, 0);
+    return tempCanvas;
+}
+
+playerImg.onload = () => { processedPlayer = processImage(playerImg); };
+enemyImg.onload = () => { processedEnemy = processImage(enemyImg); };
+
 const bgNeon = new Image();
 bgNeon.src = 'assets/bg_neon.png';
 
@@ -35,8 +62,249 @@ let frameCount = 0;
 let roadOffset = 0;
 
 // New Features State
-let highScore = localStorage.getItem('neonRunnerHighScore') || 0;
+let highScores = {
+    easy: parseInt(localStorage.getItem('neonRunner_easy')) || 0,
+    medium: parseInt(localStorage.getItem('neonRunner_medium')) || 0,
+    hard: parseInt(localStorage.getItem('neonRunner_hard')) || 0,
+    insane: parseInt(localStorage.getItem('neonRunner_insane')) || 0
+};
+// Legacy support for global high score
+let highScore = Math.max(localStorage.getItem('neonRunnerHighScore') || 0, highScores.easy, highScores.medium, highScores.hard, highScores.insane);
+
+let insaneLoses = 0; // Session-based jumpscare counter
+let resetSlipCount = 0; // Tracking "My finger slipped" instances
 let currentMap = 'neon';
+let currentDifficultyLevel = 'medium';
+
+let stars = [];
+for (let i = 0; i < 100; i++) {
+    stars.push({
+        x: Math.random() * 500, // canvas width
+        y: Math.random() * 800, // canvas height
+        size: Math.random() * 2,
+        speed: Math.random() * 0.5 + 0.1
+    });
+}
+
+function updateHighScoreUI() {
+    document.getElementById('start-high-score').innerText = highScore;
+    // Update modal elements
+    const hsEasy = document.getElementById('hs-easy');
+    const hsMedium = document.getElementById('hs-medium');
+    const hsHard = document.getElementById('hs-hard');
+    const hsInsane = document.getElementById('hs-insane');
+    
+    if (hsEasy) hsEasy.innerText = highScores.easy;
+    if (hsMedium) hsMedium.innerText = highScores.medium;
+    if (hsHard) hsHard.innerText = highScores.hard;
+    if (hsInsane) hsInsane.innerText = highScores.insane;
+}
+updateHighScoreUI();
+
+// High Score Modal & Reset Logic
+const hsModal = document.getElementById('hs-modal');
+const hsViewScreen = document.getElementById('hs-view-screen');
+const hsResetScreen = document.getElementById('hs-reset-screen');
+const resetPrompt = document.getElementById('reset-prompt');
+const resetButtons = document.getElementById('reset-buttons');
+
+window.toggleHSModal = function(show) {
+    if (show) {
+        hsModal.classList.remove('hidden');
+        hsViewScreen.classList.remove('hidden');
+        hsResetScreen.classList.add('hidden');
+    } else {
+        hsModal.classList.add('hidden');
+    }
+};
+
+window.startResetFlow = function() {
+    hsViewScreen.classList.add('hidden');
+    hsResetScreen.classList.remove('hidden');
+    showResetStep(1);
+};
+
+function showResetStep(step) {
+    resetButtons.innerHTML = '';
+    
+    const goodCall = () => {
+        resetPrompt.innerText = "Good call. You ain't hitting those scores again.";
+        resetButtons.innerHTML = '<button class="btn btn-retry" style="width: 100%" onclick="toggleHSModal(false)">THANKS...</button>';
+    };
+
+    if (step === 1) {
+        resetPrompt.innerText = "Are you sure?";
+        createResetBtn("Yes", () => showResetStep(2));
+        createResetBtn("No", () => showResetStep(3));
+    } else if (step === 2) {
+        resetPrompt.innerText = "Are you sure you're sure?";
+        createResetBtn("Yes", () => showResetStep(4));
+        createResetBtn("No", goodCall);
+    } else if (step === 3) {
+        resetPrompt.innerText = "Why'd you even click reset scores in the first place?";
+        createResetBtn("My finger slipped...", () => {
+            resetSlipCount++;
+            if (resetSlipCount === 1) {
+                resetPrompt.innerText = "Dont let it happen again!";
+                resetButtons.innerHTML = '<button class="btn btn-retry" style="width: 100%" onclick="toggleHSModal(false)">OK...</button>';
+            } else if (resetSlipCount === 2) {
+                resetPrompt.innerText = "And you went and let it happen again...";
+                resetButtons.innerHTML = '';
+                createResetBtn("ok so now what?", () => {
+                    resetPrompt.innerText = "Now you reap the consequences!";
+                    resetButtons.innerHTML = '';
+                    // Trigger jumpscare
+                    playScream();
+                    const overlay = document.getElementById('jumpscare-overlay');
+                    setTimeout(() => {
+                        overlay.classList.remove('hidden');
+                        setTimeout(() => {
+                            overlay.classList.add('hidden');
+                            toggleHSModal(false);
+                        }, 2000);
+                    }, 1000);
+                });
+            } else {
+                // 3rd time or more
+                resetPrompt.innerText = "there's no way you wanted to get jumpscared again. Logic says that you must be an idiot.";
+                resetButtons.innerHTML = '';
+                createResetBtn("ugghhh", () => {
+                    resetPrompt.innerText = "I'll give you another chance... What's 9 + 10?";
+                    resetButtons.innerHTML = '';
+                    const handleMath = () => {
+                        resetPrompt.innerText = "Congrats you uncultured swine! It was 67!! The internet is no place for idiots. You're router just got fried!";
+                        resetButtons.innerHTML = '';
+                        setTimeout(triggerFakeCrash, 5500);
+                    };
+                    createResetBtn("19", handleMath);
+                    createResetBtn("21", handleMath);
+                });
+            }
+        });
+        createResetBtn("Porque me dio la gana", () => {
+            resetPrompt.innerText = "Oh you think it's funny talking in another language I dont understand? 打死我也不信你真费那个劲把这堆狗屎给翻译出来了。赶紧找点正经事做去吧！";
+            resetButtons.innerHTML = '';
+            const huhBtn = document.createElement('button');
+            huhBtn.className = 'btn';
+            huhBtn.innerText = "huh?";
+            huhBtn.onclick = () => {
+                performActualReset();
+                toggleHSModal(false);
+            };
+            resetButtons.appendChild(huhBtn);
+        });
+    } else if (step === 4) {
+        resetPrompt.innerText = "Are you really sure? There's no going back.";
+        createResetBtn("Yes", () => showResetStep(5));
+        createResetBtn("No", () => {
+            performActualReset();
+            resetPrompt.innerText = "You just clicked yes 3 times in a row to back out now? That just pissed me off. Idc! RESET SCORES!";
+            resetButtons.innerHTML = '<button class="btn btn-retry" style="width: 100%" onclick="toggleHSModal(false)">DANM...</button>';
+        });
+    } else if (step === 5) {
+        resetPrompt.innerText = "Are you so sure that you would stake your life that there has not been another human in existence as sure as you are right now?";
+        createResetBtn("Yes", () => {
+            performActualReset();
+            resetPrompt.innerText = "Yeah, right...";
+            resetButtons.innerHTML = '<button class="btn btn-retry" style="width: 100%" onclick="toggleHSModal(false)">FINALLY</button>';
+        });
+        createResetBtn("No", () => showResetStep(6));
+    } else if (step === 6) {
+        resetPrompt.innerText = "How can you ever confirm your beliefs if you don't stick by what you claim to be sure of until the bitter end?";
+        createResetBtn("cuz I'm like that", () => {
+            performActualReset();
+            resetPrompt.innerText = "yeah... you're not that guy pal.";
+            resetButtons.innerHTML = '<button class="btn btn-retry" style="width: 100%" onclick="toggleHSModal(false)">Ouch.</button>';
+        });
+        createResetBtn("cuz I'm woke", () => {
+            resetPrompt.innerText = "Not with the scores you're trying to reset you're not. I'd wanna reset them too.";
+            resetButtons.innerHTML = '<button class="btn btn-retry" style="width: 100%" onclick="toggleHSModal(false)">HEY!</button>';
+        });
+        createResetBtn("my name is Jeff", () => {
+            resetPrompt.innerText = "Yup that was the last straw...";
+            resetButtons.innerHTML = '';
+            setTimeout(() => {
+                alert("ERROR: you've been banned from the game.");
+                location.reload(); // "Banned" by refreshing/resetting the session
+            }, 2000);
+        });
+    }
+}
+
+function createResetBtn(text, onClick) {
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.innerText = text;
+    btn.onclick = onClick;
+    resetButtons.appendChild(btn);
+}
+
+function performActualReset() {
+    highScores = { easy: 0, medium: 0, hard: 0, insane: 0 };
+    highScore = 0;
+    localStorage.removeItem('neonRunnerHighScore');
+    localStorage.setItem('neonRunner_easy', 0);
+    localStorage.setItem('neonRunner_medium', 0);
+    localStorage.setItem('neonRunner_hard', 0);
+    localStorage.setItem('neonRunner_insane', 0);
+    updateHighScoreUI();
+}
+
+// Pre-load and unlock audio
+let audioUnlocked = false;
+const screamAsset = document.getElementById('scream-asset');
+
+window.testSound = function() {
+    screamAsset.play().then(() => {
+        alert("Success! The FNAF scream is playing.");
+        audioUnlocked = true;
+    }).catch(e => {
+        // Fallback: Try to synthesize a beep
+        try {
+            const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = tempCtx.createOscillator();
+            osc.connect(tempCtx.destination);
+            osc.start();
+            osc.stop(tempCtx.currentTime + 0.2);
+            alert("The file 'assets/scream.wav' exists but the browser can't play it. Error: " + e.message);
+        } catch(err) {
+            alert("Audio is strictly blocked. Check browser settings.");
+        }
+    });
+};
+
+function playScream() {
+    screamAsset.currentTime = 0;
+    screamAsset.play().catch(e => console.log("Scream failed:", e));
+}
+
+function triggerFakeCrash() {
+    const crashDiv = document.createElement('div');
+    crashDiv.className = 'crash-overlay';
+    
+    let codeText = "";
+    for(let i=0; i<20; i++) {
+        codeText += `segment .text\n  global _start\n_start:\n  mov eax, 1\n  mov ebx, 0\n  int 0x80\n0x${Math.random().toString(16).substr(2, 8)} CRITICAL_FAILURE\n`;
+    }
+    
+    crashDiv.innerHTML = `<div>${codeText}</div><div class="crash-message-big">You're router just got fried!</div>`;
+    document.body.appendChild(crashDiv);
+    
+    // Disable everything
+    isPlaying = false;
+    cancelAnimationFrame(animationId);
+}
+
+window.addEventListener('mousedown', () => {
+    if (!audioUnlocked) {
+        // Play and immediately pause to unlock
+        screamAsset.play().then(() => {
+            screamAsset.pause();
+            screamAsset.currentTime = 0;
+            audioUnlocked = true;
+        }).catch(e => console.log("Unlock failed:", e));
+    }
+}, { once: true });
 
 const crashMessages = [
     "YOU'RE TRASH!",
@@ -131,15 +399,13 @@ class Player {
     }
 
     draw() {
-        // Fallback rectangle if image isn't loaded
-        if (!playerImg.complete) {
+        if (processedPlayer) {
+            ctx.drawImage(processedPlayer, this.x, this.y, this.width, this.height);
+        } else if (playerImg.complete) {
+            ctx.drawImage(playerImg, this.x, this.y, this.width, this.height);
+        } else {
             ctx.fillStyle = '#00f3ff';
             ctx.fillRect(this.x, this.y, this.width, this.height);
-        } else {
-            // Draw image with globalCompositeOperation to remove black background
-            ctx.globalCompositeOperation = 'screen';
-            ctx.drawImage(playerImg, this.x, this.y, this.width, this.height);
-            ctx.globalCompositeOperation = 'source-over';
         }
     }
 }
@@ -159,13 +425,13 @@ class Enemy {
     }
 
     draw() {
-        if (!enemyImg.complete) {
+        if (processedEnemy) {
+            ctx.drawImage(processedEnemy, this.x, this.y, this.width, this.height);
+        } else if (enemyImg.complete) {
+            ctx.drawImage(enemyImg, this.x, this.y, this.width, this.height);
+        } else {
             ctx.fillStyle = '#ff003c';
             ctx.fillRect(this.x, this.y, this.width, this.height);
-        } else {
-            ctx.globalCompositeOperation = 'screen';
-            ctx.drawImage(enemyImg, this.x, this.y, this.width, this.height);
-            ctx.globalCompositeOperation = 'source-over';
         }
     }
 }
@@ -196,6 +462,51 @@ function drawRoad() {
             ctx.lineTo(canvas.width, i);
             ctx.stroke();
         }
+    } else if (currentMap === 'rainbow') {
+        // Space background
+        ctx.fillStyle = '#050010';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Parallax Stars
+        ctx.fillStyle = '#ffffff';
+        stars.forEach(star => {
+            star.y += currentSpeed * 0.2;
+            if (star.y > 800) star.y = 0;
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Rainbow Road
+        const colors = ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#8b00ff'];
+        const stripeWidth = canvas.width / colors.length;
+        
+        roadOffset += currentSpeed;
+        if (roadOffset >= 100) roadOffset -= 100;
+
+        colors.forEach((color, i) => {
+            ctx.fillStyle = color;
+            ctx.globalAlpha = 0.7;
+            ctx.fillRect(i * stripeWidth, 0, stripeWidth, canvas.height);
+            
+            // Tiles for motion
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            for (let y = (roadOffset % 100); y < canvas.height; y += 100) {
+                ctx.fillRect(i * stripeWidth, y, stripeWidth, 50);
+            }
+        });
+        ctx.globalAlpha = 1.0;
+
+        // Glowing rails
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#00f3ff';
+        ctx.beginPath();
+        ctx.moveTo(2, 0); ctx.lineTo(2, canvas.height);
+        ctx.moveTo(canvas.width-2, 0); ctx.lineTo(canvas.width-2, canvas.height);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
     } else {
         // Draw image-based backgrounds
         let bgImg = bgNeon;
@@ -292,18 +603,84 @@ function gameOver() {
     
     // High Score logic
     let finalScoreInt = Math.floor(score);
+    
+    // Update global high score
     if (finalScoreInt > highScore) {
         highScore = finalScoreInt;
         localStorage.setItem('neonRunnerHighScore', highScore);
     }
     
+    // Update difficulty-specific high score
+    if (finalScoreInt > highScores[currentDifficultyLevel]) {
+        highScores[currentDifficultyLevel] = finalScoreInt;
+        localStorage.setItem(`neonRunner_${currentDifficultyLevel}`, finalScoreInt);
+    }
+    
+    updateHighScoreUI();
+    
     // UI Updates
     finalScore.innerText = finalScoreInt;
-    document.getElementById('game-over-high-score').innerText = highScore;
+    document.getElementById('game-over-high-score').innerText = highScores[currentDifficultyLevel];
     
     // Random Crash Message
-    const randomMessage = crashMessages[Math.floor(Math.random() * crashMessages.length)];
-    document.getElementById('crash-message').innerText = randomMessage;
+    const insaneContent = document.getElementById('insane-loser-content');
+    const easyContent = document.getElementById('easy-loser-content');
+    const mediumContent = document.getElementById('medium-loser-content');
+    const hardContent = document.getElementById('hard-loser-content');
+    const crashMessage = document.getElementById('crash-message');
+
+    // Reset visibility
+    insaneContent.classList.add('hidden');
+    easyContent.classList.add('hidden');
+    mediumContent.classList.add('hidden');
+    hardContent.classList.add('hidden');
+
+    if (currentDifficultyLevel === 'insane') {
+        insaneLoses++;
+
+        if (insaneLoses % 2 === 0) {
+            // JUMPSCARE!
+            const overlay = document.getElementById('jumpscare-overlay');
+            
+            // Start audio immediately (since it has 1s of silence)
+            playScream();
+
+            // Show visual 1 second later to match the sound
+            setTimeout(() => {
+                overlay.classList.remove('hidden');
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                }, 2000); // Keep it on screen for 2s after it appears
+            }, 1000);
+
+            // Change message for jumpscare rounds
+            document.getElementById('crash-message').innerText = "Told you so";
+        } else {
+            // Normal Insane loss message
+            document.getElementById('crash-message').innerText = "I don't know who you think you are, but you better go back to easy mode...or else..";
+        }
+
+        insaneContent.classList.remove('hidden');
+        crashMessage.style.color = "#ff0000";
+        crashMessage.style.fontSize = "18px";
+    } else if (currentDifficultyLevel === 'easy') {
+        easyContent.classList.remove('hidden');
+        crashMessage.innerText = "Losing on easy? Seriously?";
+        crashMessage.style.color = "#00f3ff";
+    } else if (currentDifficultyLevel === 'medium') {
+        mediumContent.classList.remove('hidden');
+        crashMessage.innerText = "Mid difficulty, mid player.";
+        crashMessage.style.color = "#ff00ea";
+    } else if (currentDifficultyLevel === 'hard') {
+        hardContent.classList.remove('hidden');
+        crashMessage.innerText = "Just go back to easy bro";
+        crashMessage.style.color = "#ff0000";
+    } else {
+        const randomMessage = crashMessages[Math.floor(Math.random() * crashMessages.length)];
+        crashMessage.innerText = randomMessage;
+        crashMessage.style.color = ""; // Reset to default
+        crashMessage.style.fontSize = "";
+    }
 
     scoreDisplay.style.display = 'none';
     gameOverMenu.classList.remove('hidden');
@@ -372,18 +749,23 @@ window.startGame = function(difficulty) {
     player = new Player();
 
     // Set difficulty
+    currentDifficultyLevel = difficulty;
     switch(difficulty) {
         case 'easy':
             currentSpeed = 2.5;
             spawnRate = 120;
             break;
         case 'medium':
+            currentSpeed = 3.75;
+            spawnRate = 100;
+            break;
+        case 'hard':
             currentSpeed = 5;
             spawnRate = 80;
             break;
-        case 'hard':
-            currentSpeed = 10;
-            spawnRate = 30;
+        case 'insane':
+            currentSpeed = 18;
+            spawnRate = 12;
             break;
     }
     
