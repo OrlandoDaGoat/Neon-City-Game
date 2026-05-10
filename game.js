@@ -195,8 +195,8 @@ function gameLoop() {
             scoreValue.innerText = Math.floor(score);
             
             // Progressive difficulty
-            currentSpeed += 0.05;
-            spawnRate = Math.max(15, spawnRate - 0.5); // Cap min spawn rate
+            currentSpeed += 0.02;
+            spawnRate = Math.max(15, spawnRate - 0.2); // Cap min spawn rate
         }
     }
 
@@ -223,12 +223,12 @@ window.startGame = function(difficulty) {
     // Set difficulty
     switch(difficulty) {
         case 'easy':
-            currentSpeed = 4;
-            spawnRate = 80;
+            currentSpeed = 2.5;
+            spawnRate = 120;
             break;
         case 'medium':
-            currentSpeed = 7;
-            spawnRate = 50;
+            currentSpeed = 5;
+            spawnRate = 80;
             break;
         case 'hard':
             currentSpeed = 10;
