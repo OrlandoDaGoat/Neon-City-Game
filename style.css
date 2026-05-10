@@ -203,3 +203,49 @@ canvas {
     80% { clip: rect(91px, 9999px, 32px, 0); }
     100% { clip: rect(12px, 9999px, 69px, 0); }
 }
+
+.high-score-text {
+    font-size: 20px !important;
+    color: var(--neon-pink) !important;
+    text-shadow: 0 0 10px var(--neon-pink);
+    margin-bottom: 20px !important;
+}
+
+.map-selection {
+    margin-bottom: 20px;
+    padding: 10px;
+    background: rgba(0, 243, 255, 0.1);
+    border: 1px solid var(--neon-blue);
+    border-radius: 8px;
+}
+
+.map-selection label {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--neon-blue);
+    font-weight: bold;
+}
+
+#map-select {
+    width: 100%;
+    padding: 10px;
+    background: var(--bg-dark);
+    color: white;
+    border: 1px solid var(--neon-pink);
+    border-radius: 4px;
+    font-family: 'Orbitron', sans-serif;
+    outline: none;
+    cursor: pointer;
+}
+
+.diff-text {
+    margin-bottom: 15px !important;
+}
+
+.crash-text {
+    font-size: 16px !important;
+    font-style: italic;
+    color: #ffaa00 !important;
+    text-shadow: 0 0 5px #ffaa00;
+    margin-bottom: 15px !important;
+}

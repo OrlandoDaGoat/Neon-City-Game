@@ -15,6 +15,15 @@ playerImg.src = 'assets/player_car.png';
 const enemyImg = new Image();
 enemyImg.src = 'assets/enemy_car.png';
 
+const bgNeon = new Image();
+bgNeon.src = 'assets/bg_neon.png';
+
+const bgMiami = new Image();
+bgMiami.src = 'assets/bg_miami.png';
+
+const bgRaceTrack = new Image();
+bgRaceTrack.src = 'assets/bg_race_track.png';
+
 // Game State
 let isPlaying = false;
 let animationId;
@@ -24,6 +33,21 @@ let currentSpeed = 5;
 let spawnRate = 60; // Frames between spawns
 let frameCount = 0;
 let roadOffset = 0;
+
+// New Features State
+let highScore = localStorage.getItem('neonRunnerHighScore') || 0;
+let currentMap = 'neon';
+
+const crashMessages = [
+    "YOU'RE TRASH!",
+    "I know you were drinking and driving on that one",
+    "Did you even see that car?",
+    "My grandma drives better than that",
+    "Revoked license simulator 2026",
+    "Was your monitor turned off?",
+    "That was expensive...",
+    "Are you even trying?"
+];
 
 // Entities
 let player;
@@ -103,7 +127,7 @@ class Player {
         }
 
         // Keep car within canvas bounds
-        this.x = Math.max(0, Math.min(canvas.width - this.width, this.x));
+        this.x = Math.max(40, Math.min(canvas.width - 40 - this.width, this.x));
     }
 
     draw() {
@@ -124,7 +148,7 @@ class Enemy {
     constructor() {
         this.width = CAR_WIDTH;
         this.height = CAR_HEIGHT;
-        this.x = Math.random() * (canvas.width - this.width);
+        this.x = 40 + Math.random() * (canvas.width - 80 - this.width);
         this.y = -this.height;
         // Enemy speed slightly varies
         this.speed = currentSpeed + (Math.random() * 2 - 1);
@@ -135,12 +159,10 @@ class Enemy {
     }
 
     draw() {
-        // Fallback rectangle if image isn't loaded
         if (!enemyImg.complete) {
             ctx.fillStyle = '#ff003c';
             ctx.fillRect(this.x, this.y, this.width, this.height);
         } else {
-            // Draw image with globalCompositeOperation to remove black background
             ctx.globalCompositeOperation = 'screen';
             ctx.drawImage(enemyImg, this.x, this.y, this.width, this.height);
             ctx.globalCompositeOperation = 'source-over';
@@ -149,31 +171,105 @@ class Enemy {
 }
 
 function drawRoad() {
-    // Clear canvas with slightly transparent dark to create trailing effect for neon
-    ctx.fillStyle = 'rgba(10, 10, 10, 0.8)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (currentMap === 'tron') {
+        // Clear canvas with slightly transparent dark to create trailing effect for neon
+        ctx.fillStyle = 'rgba(10, 10, 10, 0.8)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw grid lines for synthwave feel
-    ctx.strokeStyle = 'rgba(255, 0, 234, 0.3)';
-    ctx.lineWidth = 2;
+        // Draw grid lines for synthwave feel
+        ctx.strokeStyle = 'rgba(255, 0, 234, 0.3)';
+        ctx.lineWidth = 2;
 
-    // Vertical lines (perspective)
-    for (let i = 0; i <= canvas.width; i += 50) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, canvas.height);
-        ctx.stroke();
-    }
+        for (let i = 0; i <= canvas.width; i += 50) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, canvas.height);
+            ctx.stroke();
+        }
 
-    // Horizontal lines (moving)
-    roadOffset += currentSpeed;
-    if (roadOffset > 50) roadOffset = 0;
+        roadOffset += currentSpeed;
+        if (roadOffset > 50) roadOffset -= 50;
 
-    for (let i = roadOffset; i < canvas.height; i += 50) {
-        ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(canvas.width, i);
-        ctx.stroke();
+        for (let i = roadOffset; i < canvas.height; i += 50) {
+            ctx.beginPath();
+            ctx.moveTo(0, i);
+            ctx.lineTo(canvas.width, i);
+            ctx.stroke();
+        }
+    } else {
+        // Draw image-based backgrounds
+        let bgImg = bgNeon;
+        if (currentMap === 'miami') bgImg = bgMiami;
+        else if (currentMap === 'race_track') bgImg = bgRaceTrack;
+
+        roadOffset += currentSpeed;
+        if (roadOffset >= canvas.height) roadOffset -= canvas.height;
+
+        if (bgImg.complete && bgImg.naturalWidth !== 0) {
+            // Draw seamless scrolling background, cropping the middle 35% to zoom in and make the road wider
+            const sx = bgImg.naturalWidth * 0.325;
+            const sw = bgImg.naturalWidth * 0.35;
+            ctx.drawImage(bgImg, sx, 0, sw, bgImg.naturalHeight, 0, roadOffset - canvas.height, canvas.width, canvas.height);
+            ctx.drawImage(bgImg, sx, 0, sw, bgImg.naturalHeight, 0, roadOffset, canvas.width, canvas.height);
+
+            // Extend the road over the sidewalks/grass for Miami and Race Track so the car doesn't drive on them
+            if (currentMap === 'miami' || currentMap === 'race_track') {
+                const rColor = currentMap === 'miami' ? '104, 106, 115' : '48, 48, 48';
+                
+                // Left extended road (fade from sand -> solid road -> fade to center road)
+                let leftGrad = ctx.createLinearGradient(20, 0, 180, 0);
+                leftGrad.addColorStop(0, `rgba(${rColor}, 0)`);
+                leftGrad.addColorStop(0.1875, `rgba(${rColor}, 1)`); // Solid at x=50
+                leftGrad.addColorStop(0.8125, `rgba(${rColor}, 1)`); // Solid at x=150
+                leftGrad.addColorStop(1, `rgba(${rColor}, 0)`);
+                
+                ctx.fillStyle = leftGrad;
+                ctx.fillRect(20, 0, 160, canvas.height);
+                
+                // Right extended road (fade from center road -> solid road -> fade to buildings)
+                let rightGrad = ctx.createLinearGradient(320, 0, 480, 0);
+                rightGrad.addColorStop(0, `rgba(${rColor}, 0)`);
+                rightGrad.addColorStop(0.1875, `rgba(${rColor}, 1)`); // Solid at x=350
+                rightGrad.addColorStop(0.8125, `rgba(${rColor}, 1)`); // Solid at x=450
+                rightGrad.addColorStop(1, `rgba(${rColor}, 0)`);
+                
+                ctx.fillStyle = rightGrad;
+                ctx.fillRect(320, 0, 160, canvas.height);
+                
+                // Add dashed lines to make it look like extra lanes
+                ctx.strokeStyle = currentMap === 'miami' ? '#ffffff' : '#888888';
+                ctx.lineWidth = 4;
+                ctx.setLineDash([30, 30]);
+                ctx.lineDashOffset = -roadOffset;
+                
+                ctx.beginPath();
+                ctx.moveTo(110, 0);
+                ctx.lineTo(110, canvas.height);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(390, 0);
+                ctx.lineTo(390, canvas.height);
+                ctx.stroke();
+                
+                ctx.setLineDash([]);
+            }
+        } else {
+            // Fallback if image isn't loaded yet
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw basic lines just so the player knows it's moving
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 5;
+            ctx.setLineDash([30, 30]);
+            ctx.lineDashOffset = -roadOffset;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
     }
 }
 
@@ -194,8 +290,21 @@ function gameOver() {
     isPlaying = false;
     cancelAnimationFrame(animationId);
     
+    // High Score logic
+    let finalScoreInt = Math.floor(score);
+    if (finalScoreInt > highScore) {
+        highScore = finalScoreInt;
+        localStorage.setItem('neonRunnerHighScore', highScore);
+    }
+    
     // UI Updates
-    finalScore.innerText = Math.floor(score);
+    finalScore.innerText = finalScoreInt;
+    document.getElementById('game-over-high-score').innerText = highScore;
+    
+    // Random Crash Message
+    const randomMessage = crashMessages[Math.floor(Math.random() * crashMessages.length)];
+    document.getElementById('crash-message').innerText = randomMessage;
+
     scoreDisplay.style.display = 'none';
     gameOverMenu.classList.remove('hidden');
 }
@@ -247,6 +356,9 @@ function gameLoop() {
 }
 
 window.startGame = function(difficulty) {
+    // Read map selection
+    currentMap = document.getElementById('map-select').value;
+
     // Hide menus
     startMenu.classList.add('hidden');
     gameOverMenu.classList.add('hidden');
@@ -282,6 +394,9 @@ window.startGame = function(difficulty) {
 window.showMainMenu = function() {
     gameOverMenu.classList.add('hidden');
     startMenu.classList.remove('hidden');
+    
+    // Update High Score Display
+    document.getElementById('start-high-score').innerText = highScore;
     
     // Clear canvas
     ctx.fillStyle = '#0a0a0a';

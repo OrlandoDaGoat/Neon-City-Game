@@ -20,7 +20,18 @@
             <!-- Start Menu -->
             <div id="start-menu" class="menu-panel">
                 <h1 class="glitch" data-text="NEON RUNNER">NEON RUNNER</h1>
-                <p>Select Difficulty</p>
+                <p style="font-size: 11px; margin-top: -15px; margin-bottom: 15px; color: #888;">(Actually you're driving not running but runner sounds more cool)</p>
+                <p class="high-score-text">High Score: <span id="start-high-score">0</span></p>
+                <div class="map-selection">
+                    <label for="map-select">Select Map:</label>
+                    <select id="map-select">
+                        <option value="neon">Neon City</option>
+                        <option value="miami">Miami Beach</option>
+                        <option value="race_track">Race Track</option>
+                        <option value="tron">Tron</option>
+                    </select>
+                </div>
+                <p class="diff-text">Select Difficulty</p>
                 <div class="button-group">
                     <button class="btn btn-easy" onclick="startGame('easy')">EASY</button>
                     <button class="btn btn-medium" onclick="startGame('medium')">MEDIUM</button>
@@ -31,7 +42,9 @@
             <!-- Game Over Menu -->
             <div id="game-over-menu" class="menu-panel hidden">
                 <h1 class="glitch text-red" data-text="CRASHED">CRASHED</h1>
+                <p id="crash-message" class="crash-text">YOU'RE TRASH!</p>
                 <p>Final Score: <span id="final-score">0</span></p>
+                <p class="high-score-text">High Score: <span id="game-over-high-score">0</span></p>
                 <div class="button-group">
                     <button class="btn btn-retry" onclick="showMainMenu()">MAIN MENU</button>
                 </div>
