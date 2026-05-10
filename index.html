@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Runner - Cyberpunk Endless Runner</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="500" height="800"></canvas>
+        
+        <!-- UI Overlay -->
+        <div id="ui-layer">
+            <div id="score-display">Score: <span>0</span></div>
+
+            <!-- Start Menu -->
+            <div id="start-menu" class="menu-panel">
+                <h1 class="glitch" data-text="NEON RUNNER">NEON RUNNER</h1>
+                <p>Select Difficulty</p>
+                <div class="button-group">
+                    <button class="btn btn-easy" onclick="startGame('easy')">EASY</button>
+                    <button class="btn btn-medium" onclick="startGame('medium')">MEDIUM</button>
+                    <button class="btn btn-hard" onclick="startGame('hard')">HARD</button>
+                </div>
+            </div>
+
+            <!-- Game Over Menu -->
+            <div id="game-over-menu" class="menu-panel hidden">
+                <h1 class="glitch text-red" data-text="CRASHED">CRASHED</h1>
+                <p>Final Score: <span id="final-score">0</span></p>
+                <div class="button-group">
+                    <button class="btn btn-retry" onclick="showMainMenu()">MAIN MENU</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
