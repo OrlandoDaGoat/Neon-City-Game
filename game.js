@@ -375,6 +375,7 @@ let touchSide = null; // 'left', 'right', or null
 let targetX = null;
 
 canvas.addEventListener('touchstart', (e) => {
+    if (!isPlaying) return;
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
     // Support multi-touch by checking the most recent touch
@@ -384,6 +385,7 @@ canvas.addEventListener('touchstart', (e) => {
 }, { passive: false });
 
 canvas.addEventListener('touchmove', (e) => {
+    if (!isPlaying) return;
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const touch = e.touches[e.touches.length - 1];
@@ -405,6 +407,7 @@ canvas.addEventListener('touchend', (e) => {
 
 // Mouse support with side-holding logic
 canvas.addEventListener('mousedown', (e) => {
+    if (!isPlaying) return;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     touchSide = x < rect.width / 2 ? 'left' : 'right';
