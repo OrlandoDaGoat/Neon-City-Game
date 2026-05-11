@@ -253,13 +253,30 @@ class Player {
 
 class Enemy {
     constructor() {
-        this.width = CAR_WIDTH;
-        this.height = CAR_HEIGHT;
+        // Randomly pick enemy variant (1=car, 2=tank, 3=motorcycle)
+        this.variant = Math.floor(Math.random() * 3) + 1;
+
+        // Per-variant size and speed modifier
+        if (this.variant === 1) {
+            // Regular car — same size as player
+            this.width = CAR_WIDTH;       // 72
+            this.height = CAR_HEIGHT;     // 120
+            this.speedMod = 1.0;
+        } else if (this.variant === 2) {
+            // Tank — big and slow
+            this.width = Math.round(CAR_WIDTH * 1.5);   // 108
+            this.height = Math.round(CAR_HEIGHT * 1.45); // 174
+            this.speedMod = 0.55; // significantly slower
+        } else {
+            // Motorcycle — small and quick
+            this.width = Math.round(CAR_WIDTH * 0.6);   // ~43
+            this.height = Math.round(CAR_HEIGHT * 0.65); // ~78
+            this.speedMod = 1.2;
+        }
+
         this.x = 40 + Math.random() * (canvas.width - 80 - this.width);
         this.y = -this.height;
-        this.speed = currentSpeed + (Math.random() * 2 - 1);
-        // Randomly pick enemy variant (1, 2, or 3)
-        this.variant = Math.floor(Math.random() * 3) + 1;
+        this.speed = (currentSpeed + (Math.random() * 2 - 1)) * this.speedMod;
         // Extra hitbox shrink for variants 2/3 to avoid invisible border hits
         this.hitboxPadding = this.variant > 1 ? 12 : 0;
     }
@@ -915,8 +932,8 @@ function gameOver() {
     playExplosionSound();
     const exp = new Explosion(expX, expY);
 
-    // Show game over menu exactly 2 seconds after crash
-    setTimeout(() => showGameOverUI(finalScoreInt), 2000);
+    // Show game over menu 1.3 seconds after crash
+    setTimeout(() => showGameOverUI(finalScoreInt), 1300);
 
     // Keep running explosion animation independently
     function runExplosion() {
