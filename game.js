@@ -13,13 +13,13 @@ const playerImg = new Image();
 playerImg.src = 'assets/player_car.png';
 
 const enemyImg = new Image();
-enemyImg.src = 'assets/enemy_car.png';
+enemyImg.src = 'assets/enemy_tank.png';
 
 const enemyImg2 = new Image();
 enemyImg2.src = 'assets/cyber_enemy_vehicle.png';
 
 const enemyImg3 = new Image();
-enemyImg3.src = 'assets/cyber_motorcycle_upside_down.png';
+enemyImg3.src = 'assets/cyber_motorcycle_.png';
 
 // Processed images for solid look without black/white background
 let processedPlayer = null;
