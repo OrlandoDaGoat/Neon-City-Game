@@ -60,6 +60,7 @@ let currentSpeed = 5;
 let spawnRate = 60; // Frames between spawns
 let frameCount = 0;
 let roadOffset = 0;
+let lastTime = 0;
 
 // New Features State
 let highScores = {
@@ -422,21 +423,21 @@ class Player {
         this.speed = 12; // Increased from 7 for faster response
     }
 
-    update() {
+    update(dt) {
         let moving = false;
+        const adjustedSpeed = this.speed * dt;
 
         if ((keys.ArrowLeft || keys.a || touchSide === 'left') && this.x > 0) {
-            this.x -= this.speed;
+            this.x -= adjustedSpeed;
             moving = true;
         }
         if ((keys.ArrowRight || keys.d || touchSide === 'right') && this.x + this.width < canvas.width) {
-            this.x += this.speed;
+            this.x += adjustedSpeed;
             moving = true;
         }
 
-        // Remove mouse follow fallback for snappier side-holding experience
-        // Keep margin logic but make it more precise
-        const margin = 20; // Reduced margin for more movement freedom
+        // Keep car within canvas bounds
+        const margin = 20;
         this.x = Math.max(margin, Math.min(canvas.width - margin - this.width, this.x));
     }
 
@@ -462,8 +463,8 @@ class Enemy {
         this.speed = currentSpeed + (Math.random() * 2 - 1);
     }
 
-    update() {
-        this.y += this.speed;
+    update(dt) {
+        this.y += this.speed * dt;
     }
 
     draw() {
@@ -478,7 +479,7 @@ class Enemy {
     }
 }
 
-function drawRoad() {
+function drawRoad(dt) {
     if (currentMap === 'tron') {
         // Clear canvas with slightly transparent dark to create trailing effect for neon
         ctx.fillStyle = 'rgba(10, 10, 10, 0.8)';
@@ -495,7 +496,7 @@ function drawRoad() {
             ctx.stroke();
         }
 
-        roadOffset += currentSpeed;
+        roadOffset += currentSpeed * dt;
         if (roadOffset > 50) roadOffset -= 50;
 
         for (let i = roadOffset; i < canvas.height; i += 50) {
@@ -512,7 +513,7 @@ function drawRoad() {
         // Parallax Stars
         ctx.fillStyle = '#ffffff';
         stars.forEach(star => {
-            star.y += currentSpeed * 0.2;
+            star.y += currentSpeed * 0.2 * dt;
             if (star.y > canvas.height) star.y = 0;
             ctx.beginPath();
             ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
@@ -523,7 +524,7 @@ function drawRoad() {
         const colors = ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#8b00ff'];
         const stripeWidth = canvas.width / colors.length;
         
-        roadOffset += currentSpeed;
+        roadOffset += currentSpeed * dt;
         if (roadOffset >= 100) roadOffset -= 100;
 
         colors.forEach((color, i) => {
@@ -555,7 +556,7 @@ function drawRoad() {
         if (currentMap === 'miami') bgImg = bgMiami;
         else if (currentMap === 'race_track') bgImg = bgRaceTrack;
 
-        roadOffset += currentSpeed;
+        roadOffset += currentSpeed * dt;
         if (roadOffset >= canvas.height) roadOffset -= canvas.height;
 
         if (bgImg.complete && bgImg.naturalWidth !== 0) {
@@ -729,16 +730,24 @@ function gameOver() {
     gameOverMenu.classList.remove('hidden');
 }
 
-function gameLoop() {
+function gameLoop(currentTime) {
     if (!isPlaying) return;
 
-    drawRoad();
+    // Calculate delta time
+    if (!lastTime) lastTime = currentTime;
+    const deltaTime = (currentTime - lastTime) / 16.666; // Normalize to 60fps
+    lastTime = currentTime;
 
-    player.update();
+    // Cap deltaTime to prevent huge jumps (e.g. after backgrounding)
+    const dt = Math.min(deltaTime, 3);
+
+    drawRoad(dt);
+
+    player.update(dt);
     player.draw();
 
     // Spawn enemies
-    frameCount++;
+    frameCount += dt;
     if (frameCount >= spawnRate) {
         enemies.push(new Enemy());
         frameCount = 0;
@@ -747,7 +756,7 @@ function gameLoop() {
     // Update enemies
     for (let i = enemies.length - 1; i >= 0; i--) {
         let enemy = enemies[i];
-        enemy.update();
+        enemy.update(dt);
         enemy.draw();
 
         // Check collision
@@ -762,14 +771,21 @@ function gameLoop() {
             score += 10;
             scoreValue.innerText = Math.floor(score);
             
-            // Progressive difficulty
-            currentSpeed += 0.02;
-            spawnRate = Math.max(15, spawnRate - 0.2); // Cap min spawn rate
+            // Progressive difficulty scaled by mode
+            const difficultyScale = {
+                'easy': 0.005,
+                'medium': 0.015,
+                'hard': 0.03,
+                'insane': 0.1
+            };
+            const scale = difficultyScale[currentDifficultyLevel] || 0.01;
+            currentSpeed += scale;
+            spawnRate = Math.max(10, spawnRate - (scale * 5));
         }
     }
 
     // Score based on survival time as well
-    score += 0.05;
+    score += 0.05 * dt;
     scoreValue.innerText = Math.floor(score);
 
     animationId = requestAnimationFrame(gameLoop);
@@ -791,29 +807,30 @@ window.startGame = function(difficulty) {
     scoreValue.innerText = score;
     player = new Player();
 
-    // Set difficulty
+    // Set difficulty (hierarchical scales)
     currentDifficultyLevel = difficulty;
     switch(difficulty) {
         case 'easy':
-            currentSpeed = 2.5;
+            currentSpeed = 3;
             spawnRate = 120;
             break;
         case 'medium':
-            currentSpeed = 3.75;
-            spawnRate = 100;
-            break;
-        case 'hard':
             currentSpeed = 5;
             spawnRate = 80;
             break;
+        case 'hard':
+            currentSpeed = 8;
+            spawnRate = 60;
+            break;
         case 'insane':
-            currentSpeed = 18;
-            spawnRate = 12;
+            currentSpeed = 22;
+            spawnRate = 10;
             break;
     }
     
     isPlaying = true;
-    gameLoop();
+    lastTime = 0; // Reset timer for new game
+    requestAnimationFrame(gameLoop);
 }
 
 window.showMainMenu = function() {
