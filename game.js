@@ -541,8 +541,18 @@ canvas.addEventListener('touchend', (e) => {
 });
 
 // Mouse support with side-holding logic
+let isMouseDown = false;
 canvas.addEventListener('mousedown', (e) => {
     if (isPlaying) {
+        isMouseDown = true;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        touchSide = x < rect.width / 2 ? 'left' : 'right';
+    }
+});
+
+window.addEventListener('mousemove', (e) => {
+    if (isPlaying && isMouseDown) {
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         touchSide = x < rect.width / 2 ? 'left' : 'right';
@@ -550,6 +560,7 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 window.addEventListener('mouseup', () => {
+    isMouseDown = false;
     touchSide = null;
 });
 
