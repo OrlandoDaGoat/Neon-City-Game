@@ -108,6 +108,16 @@ window.showMainMenu = function() {
     if (uiLayer) uiLayer.style.pointerEvents = 'auto';
     canvas.style.pointerEvents = 'none';
 }
+
+// Background Assets
+const bgNeon = new Image();
+bgNeon.src = 'assets/bg_neon.png';
+
+const bgMiami = new Image();
+bgMiami.src = 'assets/bg_miami.png';
+
+const bgRaceTrack = new Image();
+bgRaceTrack.src = 'assets/bg_race_track.png';
 // Game State Variables
 let isPlaying = false;
 let animationId;
