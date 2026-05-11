@@ -50,6 +50,7 @@ canvas {
     display: block;
     width: 100%;
     height: 100%;
+    pointer-events: none; /* Blocked by default until game starts */
 }
 
 #ui-layer {
@@ -58,7 +59,7 @@ canvas {
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none; /* Let clicks pass through to buttons but not empty space */
+    pointer-events: auto;
     z-index: 100;
 }
 

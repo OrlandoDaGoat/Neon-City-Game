@@ -734,6 +734,8 @@ function gameOver() {
 
     scoreDisplay.style.display = 'none';
     gameOverMenu.classList.remove('hidden');
+    document.getElementById('ui-layer').style.pointerEvents = 'auto';
+    canvas.style.pointerEvents = 'none';
 }
 
 function gameLoop(currentTime) {
@@ -835,6 +837,8 @@ window.startGame = function(difficulty) {
     }
     
     isPlaying = true;
+    document.getElementById('ui-layer').style.pointerEvents = 'none';
+    canvas.style.pointerEvents = 'auto';
     lastTime = 0; // Reset timer for new game
     requestAnimationFrame(gameLoop);
 }
@@ -849,6 +853,8 @@ window.showMainMenu = function() {
     // Clear canvas
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    document.getElementById('ui-layer').style.pointerEvents = 'auto';
+    canvas.style.pointerEvents = 'none';
 }
 
 // Initial clear
