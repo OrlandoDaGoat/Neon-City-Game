@@ -263,14 +263,14 @@ class Enemy {
             this.height = CAR_HEIGHT;     // 120
             this.speedMod = 1.0;
         } else if (this.variant === 2) {
-            // Tank — big and slow
-            this.width = Math.round(CAR_WIDTH * 1.5);   // 108
-            this.height = Math.round(CAR_HEIGHT * 1.45); // 174
-            this.speedMod = 0.55; // significantly slower
+            // Tank — as big as shown in screenshot, big and slow
+            this.width = Math.round(CAR_WIDTH * 2.0);    // 144
+            this.height = Math.round(CAR_HEIGHT * 1.5);  // 180
+            this.speedMod = 0.55;
         } else {
-            // Motorcycle — small and quick
-            this.width = Math.round(CAR_WIDTH * 0.6);   // ~43
-            this.height = Math.round(CAR_HEIGHT * 0.65); // ~78
+            // Motorcycle — same size as player car
+            this.width = CAR_WIDTH;       // 72
+            this.height = CAR_HEIGHT;     // 120
             this.speedMod = 1.2;
         }
 
