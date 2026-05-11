@@ -129,6 +129,11 @@ window.startGame = function(difficulty) {
     }
     
     isPlaying = true;
+    // Cancel any lingering game-over timer from a previous round
+    if (gameOverTimerId) {
+        clearTimeout(gameOverTimerId);
+        gameOverTimerId = null;
+    }
     const uiLayer = document.getElementById('ui-layer');
     if (uiLayer) uiLayer.style.pointerEvents = 'none';
     canvas.style.pointerEvents = 'auto';
@@ -163,6 +168,7 @@ bgRaceTrack.src = 'assets/bg_race_track.png';
 // Game State Variables
 let isPlaying = false;
 let animationId;
+let gameOverTimerId = null; // Tracks the game-over menu delay timer
 let score = 0;
 let baseSpeed = 5;
 let currentSpeed = 5;
@@ -933,7 +939,7 @@ function gameOver() {
     const exp = new Explosion(expX, expY);
 
     // Show game over menu 1.3 seconds after crash
-    setTimeout(() => showGameOverUI(finalScoreInt), 1300);
+    gameOverTimerId = setTimeout(() => showGameOverUI(finalScoreInt), 1300);
 
     // Keep running explosion animation independently
     function runExplosion() {
