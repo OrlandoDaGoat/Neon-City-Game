@@ -108,6 +108,8 @@ window.showMainMenu = function() {
     if (uiLayer) uiLayer.style.pointerEvents = 'auto';
     canvas.style.pointerEvents = 'none';
 }
+// Game State Variables
+let isPlaying = false;
 let animationId;
 let score = 0;
 let baseSpeed = 5;
@@ -131,6 +133,80 @@ let insaneLoses = 0; // Session-based jumpscare counter
 let resetSlipCount = 0; // Tracking "My finger slipped" instances
 let currentMap = 'neon';
 let currentDifficultyLevel = 'medium';
+
+// Car Dimensions
+const CAR_WIDTH = 60;
+const CAR_HEIGHT = 100;
+
+// Entities
+let player;
+let enemies = [];
+
+// Classes (Must be defined before startGame uses them)
+class Player {
+    constructor() {
+        this.width = CAR_WIDTH;
+        this.height = CAR_HEIGHT;
+        this.x = canvas.width / 2 - this.width / 2;
+        this.y = canvas.height - this.height - 20;
+        this.speed = 12; // Increased from 7 for faster response
+    }
+
+    update(dt) {
+        let moving = false;
+        const adjustedSpeed = this.speed * dt;
+
+        if ((keys.ArrowLeft || keys.a || touchSide === 'left') && this.x > 0) {
+            this.x -= adjustedSpeed;
+            moving = true;
+        }
+        if ((keys.ArrowRight || keys.d || touchSide === 'right') && this.x + this.width < canvas.width) {
+            this.x += adjustedSpeed;
+            moving = true;
+        }
+
+        // Keep car within canvas bounds
+        const margin = 20;
+        this.x = Math.max(margin, Math.min(canvas.width - margin - this.width, this.x));
+    }
+
+    draw() {
+        if (processedPlayer) {
+            ctx.drawImage(processedPlayer, this.x, this.y, this.width, this.height);
+        } else if (playerImg.complete) {
+            ctx.drawImage(playerImg, this.x, this.y, this.width, this.height);
+        } else {
+            ctx.fillStyle = '#00f3ff';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+}
+
+class Enemy {
+    constructor() {
+        this.width = CAR_WIDTH;
+        this.height = CAR_HEIGHT;
+        this.x = 40 + Math.random() * (canvas.width - 80 - this.width);
+        this.y = -this.height;
+        // Enemy speed slightly varies
+        this.speed = currentSpeed + (Math.random() * 2 - 1);
+    }
+
+    update(dt) {
+        this.y += this.speed * dt;
+    }
+
+    draw() {
+        if (processedEnemy) {
+            ctx.drawImage(processedEnemy, this.x, this.y, this.width, this.height);
+        } else if (enemyImg.complete) {
+            ctx.drawImage(enemyImg, this.x, this.y, this.width, this.height);
+        } else {
+            ctx.fillStyle = '#ff003c';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+}
 
 let stars = [];
 for (let i = 0; i < 100; i++) {
@@ -402,14 +478,6 @@ const crashMessages = [
     "Are you even trying?"
 ];
 
-// Entities
-let player;
-let enemies = [];
-
-// Car Dimensions
-const CAR_WIDTH = 60;
-const CAR_HEIGHT = 100;
-
 // Input
 const keys = {
     ArrowLeft: false,
@@ -475,70 +543,6 @@ window.addEventListener('mouseup', () => {
     touchSide = null;
 });
 
-class Player {
-    constructor() {
-        this.width = CAR_WIDTH;
-        this.height = CAR_HEIGHT;
-        this.x = canvas.width / 2 - this.width / 2;
-        this.y = canvas.height - this.height - 20;
-        this.speed = 12; // Increased from 7 for faster response
-    }
-
-    update(dt) {
-        let moving = false;
-        const adjustedSpeed = this.speed * dt;
-
-        if ((keys.ArrowLeft || keys.a || touchSide === 'left') && this.x > 0) {
-            this.x -= adjustedSpeed;
-            moving = true;
-        }
-        if ((keys.ArrowRight || keys.d || touchSide === 'right') && this.x + this.width < canvas.width) {
-            this.x += adjustedSpeed;
-            moving = true;
-        }
-
-        // Keep car within canvas bounds
-        const margin = 20;
-        this.x = Math.max(margin, Math.min(canvas.width - margin - this.width, this.x));
-    }
-
-    draw() {
-        if (processedPlayer) {
-            ctx.drawImage(processedPlayer, this.x, this.y, this.width, this.height);
-        } else if (playerImg.complete) {
-            ctx.drawImage(playerImg, this.x, this.y, this.width, this.height);
-        } else {
-            ctx.fillStyle = '#00f3ff';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-        }
-    }
-}
-
-class Enemy {
-    constructor() {
-        this.width = CAR_WIDTH;
-        this.height = CAR_HEIGHT;
-        this.x = 40 + Math.random() * (canvas.width - 80 - this.width);
-        this.y = -this.height;
-        // Enemy speed slightly varies
-        this.speed = currentSpeed + (Math.random() * 2 - 1);
-    }
-
-    update(dt) {
-        this.y += this.speed * dt;
-    }
-
-    draw() {
-        if (processedEnemy) {
-            ctx.drawImage(processedEnemy, this.x, this.y, this.width, this.height);
-        } else if (enemyImg.complete) {
-            ctx.drawImage(enemyImg, this.x, this.y, this.width, this.height);
-        } else {
-            ctx.fillStyle = '#ff003c';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-        }
-    }
-}
 
 function drawRoad(dt) {
     if (currentMap === 'tron') {
