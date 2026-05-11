@@ -791,39 +791,151 @@ function checkCollision(rect1, rect2) {
     );
 }
 
+// --- Explosion Effect ---
+function playExplosionSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        // White noise burst for the crack
+        const bufferSize = Math.floor(audioCtx.sampleRate * 0.6);
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.5);
+        }
+
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+
+        // Low-pass filter for that deep boom feel
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.5);
+
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(2.0, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+        source.start();
+    } catch (e) {
+        console.log('Explosion sound failed:', e);
+    }
+}
+
+class Explosion {
+    constructor(x, y) {
+        this.particles = [];
+        this.done = false;
+        const colors = ['#ff4400', '#ff8800', '#ffcc00', '#ff2200', '#ffffff', '#ff6600', '#ffaa00'];
+        for (let i = 0; i < 55; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 10 + 2;
+            this.particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                alpha: 1,
+                size: Math.random() * 14 + 4,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                decay: Math.random() * 0.018 + 0.012
+            });
+        }
+        // Add a few big smoke rings
+        for (let i = 0; i < 8; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 3 + 1;
+            this.particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                alpha: 0.5,
+                size: Math.random() * 28 + 12,
+                color: '#888888',
+                decay: 0.008
+            });
+        }
+    }
+
+    update() {
+        this.particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.15; // light gravity
+            p.vx *= 0.96;
+            p.alpha -= p.decay;
+            p.size *= 0.975;
+        });
+        this.particles = this.particles.filter(p => p.alpha > 0.01);
+        if (this.particles.length === 0) this.done = true;
+    }
+
+    draw() {
+        this.particles.forEach(p => {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.alpha);
+            ctx.fillStyle = p.color;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, Math.max(0.1, p.size), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+    }
+}
+
 function gameOver() {
     isPlaying = false;
     cancelAnimationFrame(animationId);
-    
+
     // High Score logic
     let finalScoreInt = Math.floor(score);
-    
-    // Update global high score
     if (finalScoreInt > highScore) {
         highScore = finalScoreInt;
         localStorage.setItem('neonRunnerHighScore', highScore);
     }
-    
-    // Update difficulty-specific high score
     if (finalScoreInt > highScores[currentDifficultyLevel]) {
         highScores[currentDifficultyLevel] = finalScoreInt;
         localStorage.setItem(`neonRunner_${currentDifficultyLevel}`, finalScoreInt);
     }
-    
     updateHighScoreUI();
-    
+
+    // Play explosion at player position
+    const expX = player.x + player.width / 2;
+    const expY = player.y + player.height / 2;
+    playExplosionSound();
+    const exp = new Explosion(expX, expY);
+
+    // Run explosion animation before showing game over menu
+    function runExplosion() {
+        ctx.fillStyle = 'rgba(10, 10, 10, 0.25)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        exp.update();
+        exp.draw();
+        if (!exp.done) {
+            requestAnimationFrame(runExplosion);
+        } else {
+            showGameOverUI(finalScoreInt);
+        }
+    }
+    requestAnimationFrame(runExplosion);
+}
+
+function showGameOverUI(finalScoreInt) {
     // UI Updates
     finalScore.innerText = finalScoreInt;
     document.getElementById('game-over-high-score').innerText = highScores[currentDifficultyLevel];
-    
-    // Random Crash Message
+
     const insaneContent = document.getElementById('insane-loser-content');
     const easyContent = document.getElementById('easy-loser-content');
     const mediumContent = document.getElementById('medium-loser-content');
     const hardContent = document.getElementById('hard-loser-content');
     const crashMessage = document.getElementById('crash-message');
 
-    // Reset visibility
     insaneContent.classList.add('hidden');
     easyContent.classList.add('hidden');
     mediumContent.classList.add('hidden');
