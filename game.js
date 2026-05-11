@@ -69,15 +69,15 @@ window.startGame = function(difficulty) {
     currentDifficultyLevel = difficulty;
     switch(difficulty) {
         case 'easy':
-            currentSpeed = 3;
+            currentSpeed = 3.6; // 20% faster
             spawnRate = 120;
             break;
         case 'medium':
-            currentSpeed = 5;
+            currentSpeed = 6; // 20% faster
             spawnRate = 80;
             break;
         case 'hard':
-            currentSpeed = 8;
+            currentSpeed = 9.6; // 20% faster
             spawnRate = 60;
             break;
         case 'insane':
@@ -145,8 +145,8 @@ let currentMap = 'neon';
 let currentDifficultyLevel = 'medium';
 
 // Car Dimensions
-const CAR_WIDTH = 60;
-const CAR_HEIGHT = 100;
+const CAR_WIDTH = 72;  // 20% bigger (60 -> 72)
+const CAR_HEIGHT = 120; // 20% bigger (100 -> 120)
 
 // Entities
 let player;
@@ -176,14 +176,11 @@ class Player {
         }
 
         // Mouse follow movement
-        if (targetX !== null && targetY !== null) {
+        if (targetX !== null) {
             const centerX = this.x + this.width / 2;
-            const centerY = this.y + this.height / 2;
-            
             const diffX = targetX - centerX;
-            const diffY = targetY - centerY;
 
-            // X Movement
+            // X Movement only
             if (Math.abs(diffX) > 5) {
                 if (diffX > 0 && this.x + this.width < canvas.width) {
                     this.x += Math.min(diffX, adjustedSpeed);
@@ -193,27 +190,6 @@ class Player {
                     moving = true;
                 }
             }
-
-            // Y Movement
-            if (Math.abs(diffY) > 5) {
-                if (diffY > 0 && this.y + this.height < canvas.height - 10) {
-                    this.y += Math.min(diffY, adjustedSpeed);
-                    moving = true;
-                } else if (diffY < 0 && this.y > 100) { // Limit how far up the car can go
-                    this.y += Math.max(diffY, -adjustedSpeed);
-                    moving = true;
-                }
-            }
-        }
-
-        // Keyboard / Side-holding Y Movement
-        if ((keys.ArrowUp || keys.w) && this.y > 100) {
-            this.y -= adjustedSpeed;
-            moving = true;
-        }
-        if ((keys.ArrowDown || keys.s) && this.y + this.height < canvas.height - 10) {
-            this.y += adjustedSpeed;
-            moving = true;
         }
 
         // Keep car within canvas bounds
@@ -559,10 +535,9 @@ canvas.addEventListener('touchstart', (e) => {
         const rect = canvas.getBoundingClientRect();
         const touch = e.touches[e.touches.length - 1];
         const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
         
         targetX = x;
-        targetY = y;
+        targetY = null; // Reverted Y
         touchSide = x < rect.width / 2 ? 'left' : 'right';
     }
 }, { passive: false });
@@ -573,10 +548,9 @@ canvas.addEventListener('touchmove', (e) => {
         const rect = canvas.getBoundingClientRect();
         const touch = e.touches[e.touches.length - 1];
         const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
         
         targetX = x;
-        targetY = y;
+        targetY = null; // Reverted Y
         touchSide = x < rect.width / 2 ? 'left' : 'right';
     }
 }, { passive: false });
@@ -590,9 +564,8 @@ canvas.addEventListener('touchend', (e) => {
         const rect = canvas.getBoundingClientRect();
         const touch = e.touches[e.touches.length - 1];
         const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
         targetX = x;
-        targetY = y;
+        targetY = null;
         touchSide = x < rect.width / 2 ? 'left' : 'right';
     }
 });
@@ -602,7 +575,7 @@ window.addEventListener('mousemove', (e) => {
     if (isPlaying) {
         const rect = canvas.getBoundingClientRect();
         targetX = e.clientX - rect.left;
-        targetY = e.clientY - rect.top;
+        targetY = null; // Reverted Y
         touchSide = null; 
     }
 });
