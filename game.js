@@ -176,19 +176,44 @@ class Player {
         }
 
         // Mouse follow movement
-        if (targetX !== null) {
+        if (targetX !== null && targetY !== null) {
             const centerX = this.x + this.width / 2;
-            const diff = targetX - centerX;
-            // Snappy follow with a small deadzone
-            if (Math.abs(diff) > 5) {
-                if (diff > 0 && this.x + this.width < canvas.width) {
-                    this.x += Math.min(diff, adjustedSpeed);
+            const centerY = this.y + this.height / 2;
+            
+            const diffX = targetX - centerX;
+            const diffY = targetY - centerY;
+
+            // X Movement
+            if (Math.abs(diffX) > 5) {
+                if (diffX > 0 && this.x + this.width < canvas.width) {
+                    this.x += Math.min(diffX, adjustedSpeed);
                     moving = true;
-                } else if (diff < 0 && this.x > 0) {
-                    this.x += Math.max(diff, -adjustedSpeed);
+                } else if (diffX < 0 && this.x > 0) {
+                    this.x += Math.max(diffX, -adjustedSpeed);
                     moving = true;
                 }
             }
+
+            // Y Movement
+            if (Math.abs(diffY) > 5) {
+                if (diffY > 0 && this.y + this.height < canvas.height - 10) {
+                    this.y += Math.min(diffY, adjustedSpeed);
+                    moving = true;
+                } else if (diffY < 0 && this.y > 100) { // Limit how far up the car can go
+                    this.y += Math.max(diffY, -adjustedSpeed);
+                    moving = true;
+                }
+            }
+        }
+
+        // Keyboard / Side-holding Y Movement
+        if ((keys.ArrowUp || keys.w) && this.y > 100) {
+            this.y -= adjustedSpeed;
+            moving = true;
+        }
+        if ((keys.ArrowDown || keys.s) && this.y + this.height < canvas.height - 10) {
+            this.y += adjustedSpeed;
+            moving = true;
         }
 
         // Keep car within canvas bounds
@@ -508,8 +533,12 @@ const crashMessages = [
 const keys = {
     ArrowLeft: false,
     ArrowRight: false,
+    ArrowUp: false,
+    ArrowDown: false,
     a: false,
-    d: false
+    d: false,
+    w: false,
+    s: false
 };
 
 window.addEventListener('keydown', (e) => {
@@ -522,14 +551,18 @@ window.addEventListener('keyup', (e) => {
 
 let touchSide = null; // 'left', 'right', or null
 let targetX = null;
+let targetY = null;
 
 canvas.addEventListener('touchstart', (e) => {
     if (isPlaying) {
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
-        // Support multi-touch by checking the most recent touch
         const touch = e.touches[e.touches.length - 1];
         const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        
+        targetX = x;
+        targetY = y;
         touchSide = x < rect.width / 2 ? 'left' : 'right';
     }
 }, { passive: false });
@@ -540,19 +573,26 @@ canvas.addEventListener('touchmove', (e) => {
         const rect = canvas.getBoundingClientRect();
         const touch = e.touches[e.touches.length - 1];
         const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        
+        targetX = x;
+        targetY = y;
         touchSide = x < rect.width / 2 ? 'left' : 'right';
     }
 }, { passive: false });
 
 canvas.addEventListener('touchend', (e) => {
-    targetX = null; // Clear targetX to prioritize side-holding on touch
+    targetX = null;
+    targetY = null;
     if (e.touches.length === 0) {
         touchSide = null;
     } else {
-        // If still touching, update to the remaining touch
         const rect = canvas.getBoundingClientRect();
         const touch = e.touches[e.touches.length - 1];
         const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        targetX = x;
+        targetY = y;
         touchSide = x < rect.width / 2 ? 'left' : 'right';
     }
 });
@@ -562,7 +602,8 @@ window.addEventListener('mousemove', (e) => {
     if (isPlaying) {
         const rect = canvas.getBoundingClientRect();
         targetX = e.clientX - rect.left;
-        touchSide = null; // Clear touchSide when mouse is moving
+        targetY = e.clientY - rect.top;
+        touchSide = null; 
     }
 });
 
