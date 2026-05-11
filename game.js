@@ -263,9 +263,9 @@ class Enemy {
             this.height = CAR_HEIGHT;
             this.speedMod = 1.0;
         } else if (this.variant === 2) {
-            // Tank — same size as enemy car, slow
-            this.width = CAR_WIDTH;
-            this.height = CAR_HEIGHT;
+            // Tank — 2x player size, slow
+            this.width = CAR_WIDTH * 2;   // 144
+            this.height = CAR_HEIGHT * 2; // 240
             this.speedMod = 0.55;
         } else {
             // Motorcycle — same size as enemy car
