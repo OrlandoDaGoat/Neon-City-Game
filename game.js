@@ -15,11 +15,15 @@ playerImg.src = 'assets/player_car.png';
 const enemyImg = new Image();
 enemyImg.src = 'assets/enemy_car.png';
 
-// Processed images for solid look without black background
+const enemyImg2 = new Image();
+enemyImg2.src = 'assets/cyber_enemy_vehicle.png';
+
+// Processed images for solid look without black/pink background
 let processedPlayer = null;
 let processedEnemy = null;
+let processedEnemy2 = null;
 
-function processImage(img) {
+function processImage(img, removePink = false) {
     try {
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
@@ -31,8 +35,13 @@ function processImage(img) {
         const data = imgData.data;
         
         for (let i = 0; i < data.length; i += 4) {
-            // If pixel is very close to black, make it transparent
-            if (data[i] < 20 && data[i+1] < 20 && data[i+2] < 20) {
+            const r = data[i], g = data[i+1], b = data[i+2];
+            // Remove near-black pixels
+            if (r < 20 && g < 20 && b < 20) {
+                data[i+3] = 0;
+            }
+            // Remove pink/purple grid pixels (high R/B, low G)
+            if (removePink && r > 80 && g < 30 && b > 80 && r < 200) {
                 data[i+3] = 0;
             }
         }
@@ -46,6 +55,7 @@ function processImage(img) {
 
 playerImg.onload = () => { processedPlayer = processImage(playerImg); };
 enemyImg.onload = () => { processedEnemy = processImage(enemyImg); };
+enemyImg2.onload = () => { processedEnemy2 = processImage(enemyImg2, true); };
 
 // Pre-define UI functions at top level to ensure they are available even if later code has issues
 window.startGame = function(difficulty) {
@@ -217,6 +227,8 @@ class Enemy {
         this.y = -this.height;
         // Enemy speed slightly varies
         this.speed = currentSpeed + (Math.random() * 2 - 1);
+        // Randomly pick enemy variant
+        this.variant = Math.random() < 0.5 ? 1 : 2;
     }
 
     update(dt) {
@@ -224,10 +236,12 @@ class Enemy {
     }
 
     draw() {
-        if (processedEnemy) {
-            ctx.drawImage(processedEnemy, this.x, this.y, this.width, this.height);
-        } else if (enemyImg.complete) {
-            ctx.drawImage(enemyImg, this.x, this.y, this.width, this.height);
+        if (this.variant === 2 && (processedEnemy2 || enemyImg2.complete)) {
+            const img = processedEnemy2 || enemyImg2;
+            ctx.drawImage(img, this.x, this.y, this.width, this.height);
+        } else if (processedEnemy || enemyImg.complete) {
+            const img = processedEnemy || enemyImg;
+            ctx.drawImage(img, this.x, this.y, this.width, this.height);
         } else {
             ctx.fillStyle = '#ff003c';
             ctx.fillRect(this.x, this.y, this.width, this.height);
