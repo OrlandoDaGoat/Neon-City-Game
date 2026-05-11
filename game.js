@@ -69,19 +69,19 @@ window.startGame = function(difficulty) {
     currentDifficultyLevel = difficulty;
     switch(difficulty) {
         case 'easy':
-            currentSpeed = 4.68; // +30% on top of previous +20%
+            currentSpeed = 6.55; // +40% boost
             spawnRate = 120;
             break;
         case 'medium':
-            currentSpeed = 7.8; // +30% on top of previous +20%
+            currentSpeed = 10.92; // +40% boost
             spawnRate = 80;
             break;
         case 'hard':
-            currentSpeed = 12.48; // +30% on top of previous +20%
+            currentSpeed = 17.47; // +40% boost
             spawnRate = 60;
             break;
         case 'insane':
-            currentSpeed = 28.6; // +30% boost
+            currentSpeed = 28.6; 
             spawnRate = 10;
             break;
     }
