@@ -175,6 +175,22 @@ class Player {
             moving = true;
         }
 
+        // Mouse follow movement
+        if (targetX !== null) {
+            const centerX = this.x + this.width / 2;
+            const diff = targetX - centerX;
+            // Snappy follow with a small deadzone
+            if (Math.abs(diff) > 5) {
+                if (diff > 0 && this.x + this.width < canvas.width) {
+                    this.x += Math.min(diff, adjustedSpeed);
+                    moving = true;
+                } else if (diff < 0 && this.x > 0) {
+                    this.x += Math.max(diff, -adjustedSpeed);
+                    moving = true;
+                }
+            }
+        }
+
         // Keep car within canvas bounds
         const margin = 20;
         this.x = Math.max(margin, Math.min(canvas.width - margin - this.width, this.x));
@@ -529,6 +545,7 @@ canvas.addEventListener('touchmove', (e) => {
 }, { passive: false });
 
 canvas.addEventListener('touchend', (e) => {
+    targetX = null; // Clear targetX to prioritize side-holding on touch
     if (e.touches.length === 0) {
         touchSide = null;
     } else {
@@ -540,28 +557,18 @@ canvas.addEventListener('touchend', (e) => {
     }
 });
 
-// Mouse support with side-holding logic
-let isMouseDown = false;
-canvas.addEventListener('mousedown', (e) => {
-    if (isPlaying) {
-        isMouseDown = true;
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        touchSide = x < rect.width / 2 ? 'left' : 'right';
-    }
-});
-
+// Mouse support: Follow mouse position without clicking
 window.addEventListener('mousemove', (e) => {
-    if (isPlaying && isMouseDown) {
+    if (isPlaying) {
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        touchSide = x < rect.width / 2 ? 'left' : 'right';
+        targetX = e.clientX - rect.left;
+        touchSide = null; // Clear touchSide when mouse is moving
     }
 });
 
-window.addEventListener('mouseup', () => {
-    isMouseDown = false;
-    touchSide = null;
+// Reset targetX when mouse leaves canvas
+canvas.addEventListener('mouseleave', () => {
+    targetX = null;
 });
 
 
