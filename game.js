@@ -101,6 +101,35 @@ function updateHighScoreUI() {
 }
 updateHighScoreUI();
 
+// Responsive Canvas Logic
+function resizeCanvas() {
+    const container = document.getElementById('game-container');
+    const rect = container.getBoundingClientRect();
+    
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    
+    // Update stars on resize
+    stars = [];
+    for (let i = 0; i < 100; i++) {
+        stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2,
+            speed: Math.random() * 0.5 + 0.1
+        });
+    }
+
+    // If player exists, reposition it
+    if (player) {
+        player.y = canvas.height - player.height - 20;
+    }
+}
+
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('load', resizeCanvas);
+resizeCanvas();
+
 // High Score Modal & Reset Logic
 const hsModal = document.getElementById('hs-modal');
 const hsViewScreen = document.getElementById('hs-view-screen');
@@ -341,27 +370,47 @@ window.addEventListener('keyup', (e) => {
     if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
 });
 
+let touchSide = null; // 'left', 'right', or null
 let targetX = null;
 
-canvas.addEventListener('mousemove', (e) => {
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    targetX = (e.clientX - rect.left) * scaleX - (CAR_WIDTH / 2);
-});
-
-canvas.addEventListener('mouseleave', () => {
-    targetX = null;
-});
+    // Support multi-touch by checking the most recent touch
+    const touch = e.touches[e.touches.length - 1];
+    const x = touch.clientX - rect.left;
+    touchSide = x < rect.width / 2 ? 'left' : 'right';
+}, { passive: false });
 
 canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    targetX = (e.touches[0].clientX - rect.left) * scaleX - (CAR_WIDTH / 2);
+    const touch = e.touches[e.touches.length - 1];
+    const x = touch.clientX - rect.left;
+    touchSide = x < rect.width / 2 ? 'left' : 'right';
 }, { passive: false });
 
-canvas.addEventListener('touchend', () => {
-    targetX = null;
+canvas.addEventListener('touchend', (e) => {
+    if (e.touches.length === 0) {
+        touchSide = null;
+    } else {
+        // If still touching, update to the remaining touch
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[e.touches.length - 1];
+        const x = touch.clientX - rect.left;
+        touchSide = x < rect.width / 2 ? 'left' : 'right';
+    }
+});
+
+// Mouse support with side-holding logic
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    touchSide = x < rect.width / 2 ? 'left' : 'right';
+});
+
+window.addEventListener('mouseup', () => {
+    touchSide = null;
 });
 
 class Player {
@@ -370,32 +419,25 @@ class Player {
         this.height = CAR_HEIGHT;
         this.x = canvas.width / 2 - this.width / 2;
         this.y = canvas.height - this.height - 20;
-        this.speed = 7;
+        this.speed = 12; // Increased from 7 for faster response
     }
 
     update() {
-        let movedWithKeyboard = false;
+        let moving = false;
 
-        if ((keys.ArrowLeft || keys.a) && this.x > 0) {
+        if ((keys.ArrowLeft || keys.a || touchSide === 'left') && this.x > 0) {
             this.x -= this.speed;
-            movedWithKeyboard = true;
+            moving = true;
         }
-        if ((keys.ArrowRight || keys.d) && this.x + this.width < canvas.width) {
+        if ((keys.ArrowRight || keys.d || touchSide === 'right') && this.x + this.width < canvas.width) {
             this.x += this.speed;
-            movedWithKeyboard = true;
+            moving = true;
         }
 
-        if (!movedWithKeyboard && targetX !== null) {
-            // Smoothly move towards mouse/touch target
-            if (Math.abs(targetX - this.x) > this.speed) {
-                this.x += (targetX > this.x) ? this.speed : -this.speed;
-            } else {
-                this.x = targetX;
-            }
-        }
-
-        // Keep car within canvas bounds
-        this.x = Math.max(40, Math.min(canvas.width - 40 - this.width, this.x));
+        // Remove mouse follow fallback for snappier side-holding experience
+        // Keep margin logic but make it more precise
+        const margin = 20; // Reduced margin for more movement freedom
+        this.x = Math.max(margin, Math.min(canvas.width - margin - this.width, this.x));
     }
 
     draw() {
@@ -471,7 +513,7 @@ function drawRoad() {
         ctx.fillStyle = '#ffffff';
         stars.forEach(star => {
             star.y += currentSpeed * 0.2;
-            if (star.y > 800) star.y = 0;
+            if (star.y > canvas.height) star.y = 0;
             ctx.beginPath();
             ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
             ctx.fill();
@@ -526,41 +568,42 @@ function drawRoad() {
             // Extend the road over the sidewalks/grass for Miami and Race Track so the car doesn't drive on them
             if (currentMap === 'miami' || currentMap === 'race_track') {
                 const rColor = currentMap === 'miami' ? '104, 106, 115' : '48, 48, 48';
+                const sideWidth = canvas.width * 0.32; // Responsive side width
                 
-                // Left extended road (fade from sand -> solid road -> fade to center road)
-                let leftGrad = ctx.createLinearGradient(20, 0, 180, 0);
+                // Left extended road
+                let leftGrad = ctx.createLinearGradient(0, 0, sideWidth, 0);
                 leftGrad.addColorStop(0, `rgba(${rColor}, 0)`);
-                leftGrad.addColorStop(0.1875, `rgba(${rColor}, 1)`); // Solid at x=50
-                leftGrad.addColorStop(0.8125, `rgba(${rColor}, 1)`); // Solid at x=150
+                leftGrad.addColorStop(0.2, `rgba(${rColor}, 1)`);
+                leftGrad.addColorStop(0.8, `rgba(${rColor}, 1)`);
                 leftGrad.addColorStop(1, `rgba(${rColor}, 0)`);
                 
                 ctx.fillStyle = leftGrad;
-                ctx.fillRect(20, 0, 160, canvas.height);
+                ctx.fillRect(0, 0, sideWidth, canvas.height);
                 
-                // Right extended road (fade from center road -> solid road -> fade to buildings)
-                let rightGrad = ctx.createLinearGradient(320, 0, 480, 0);
+                // Right extended road
+                let rightGrad = ctx.createLinearGradient(canvas.width - sideWidth, 0, canvas.width, 0);
                 rightGrad.addColorStop(0, `rgba(${rColor}, 0)`);
-                rightGrad.addColorStop(0.1875, `rgba(${rColor}, 1)`); // Solid at x=350
-                rightGrad.addColorStop(0.8125, `rgba(${rColor}, 1)`); // Solid at x=450
+                rightGrad.addColorStop(0.2, `rgba(${rColor}, 1)`);
+                rightGrad.addColorStop(0.8, `rgba(${rColor}, 1)`);
                 rightGrad.addColorStop(1, `rgba(${rColor}, 0)`);
                 
                 ctx.fillStyle = rightGrad;
-                ctx.fillRect(320, 0, 160, canvas.height);
+                ctx.fillRect(canvas.width - sideWidth, 0, sideWidth, canvas.height);
                 
-                // Add dashed lines to make it look like extra lanes
+                // Add dashed lines
                 ctx.strokeStyle = currentMap === 'miami' ? '#ffffff' : '#888888';
                 ctx.lineWidth = 4;
                 ctx.setLineDash([30, 30]);
                 ctx.lineDashOffset = -roadOffset;
                 
                 ctx.beginPath();
-                ctx.moveTo(110, 0);
-                ctx.lineTo(110, canvas.height);
+                ctx.moveTo(sideWidth * 0.6, 0);
+                ctx.lineTo(sideWidth * 0.6, canvas.height);
                 ctx.stroke();
                 
                 ctx.beginPath();
-                ctx.moveTo(390, 0);
-                ctx.lineTo(390, canvas.height);
+                ctx.moveTo(canvas.width - sideWidth * 0.6, 0);
+                ctx.lineTo(canvas.width - sideWidth * 0.6, canvas.height);
                 ctx.stroke();
                 
                 ctx.setLineDash([]);

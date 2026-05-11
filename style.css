@@ -27,12 +27,23 @@ body {
 
 #game-container {
     position: relative;
-    width: 500px;
-    height: 800px;
+    width: 100%;
+    height: 100%;
+    max-width: 500px; /* Cap width for desktop to keep aspect ratio sensible */
+    max-height: 900px;
     box-shadow: 0 0 50px rgba(0, 243, 255, 0.2), 0 0 100px rgba(255, 0, 234, 0.1);
     border: 2px solid var(--glass-border);
     border-radius: 8px;
     overflow: hidden;
+}
+
+@media (max-width: 600px) {
+    #game-container {
+        max-width: none;
+        max-height: none;
+        border-radius: 0;
+        border: none;
+    }
 }
 
 canvas {
@@ -68,19 +79,26 @@ canvas {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     backdrop-filter: blur(10px);
-    padding: 40px;
+    padding: 30px 20px;
     border-radius: 12px;
     text-align: center;
     pointer-events: auto; /* Enable clicks on the menu */
-    width: 80%;
+    width: 90%;
+    max-width: 400px;
     box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.1);
 }
 
 .menu-panel h1 {
-    font-size: 42px;
-    margin-bottom: 20px;
+    font-size: 32px;
+    margin-bottom: 15px;
     text-transform: uppercase;
     letter-spacing: 2px;
+}
+
+@media (max-width: 400px) {
+    .menu-panel h1 {
+        font-size: 28px;
+    }
 }
 
 .menu-panel p {
