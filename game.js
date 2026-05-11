@@ -18,10 +18,14 @@ enemyImg.src = 'assets/enemy_car.png';
 const enemyImg2 = new Image();
 enemyImg2.src = 'assets/cyber_enemy_vehicle.png';
 
-// Processed images for solid look without black/pink background
+const enemyImg3 = new Image();
+enemyImg3.src = 'assets/cyber_motorcycle_upside_down.png';
+
+// Processed images for solid look without black/white background
 let processedPlayer = null;
 let processedEnemy = null;
 let processedEnemy2 = null;
+let processedEnemy3 = null;
 
 function processImage(img, removeWhite = false, crop = false) {
     try {
@@ -83,6 +87,7 @@ function processImage(img, removeWhite = false, crop = false) {
 playerImg.onload = () => { processedPlayer = processImage(playerImg); };
 enemyImg.onload = () => { processedEnemy = processImage(enemyImg); };
 enemyImg2.onload = () => { processedEnemy2 = processImage(enemyImg2, true, true); };
+enemyImg3.onload = () => { processedEnemy3 = processImage(enemyImg3, true, true); };
 
 // Pre-define UI functions at top level to ensure they are available even if later code has issues
 window.startGame = function(difficulty) {
@@ -252,12 +257,11 @@ class Enemy {
         this.height = CAR_HEIGHT;
         this.x = 40 + Math.random() * (canvas.width - 80 - this.width);
         this.y = -this.height;
-        // Enemy speed slightly varies
         this.speed = currentSpeed + (Math.random() * 2 - 1);
-        // Randomly pick enemy variant
-        this.variant = Math.random() < 0.5 ? 1 : 2;
-        // Extra hitbox shrink for variant 2 to avoid invisible border hits
-        this.hitboxPadding = this.variant === 2 ? 12 : 0;
+        // Randomly pick enemy variant (1, 2, or 3)
+        this.variant = Math.floor(Math.random() * 3) + 1;
+        // Extra hitbox shrink for variants 2/3 to avoid invisible border hits
+        this.hitboxPadding = this.variant > 1 ? 12 : 0;
     }
 
     update(dt) {
@@ -265,11 +269,12 @@ class Enemy {
     }
 
     draw() {
-        if (this.variant === 2 && (processedEnemy2 || enemyImg2.complete)) {
-            const img = processedEnemy2 || enemyImg2;
-            ctx.drawImage(img, this.x, this.y, this.width, this.height);
-        } else if (processedEnemy || enemyImg.complete) {
-            const img = processedEnemy || enemyImg;
+        let img = null;
+        if (this.variant === 3) img = processedEnemy3 || (enemyImg3.complete ? enemyImg3 : null);
+        else if (this.variant === 2) img = processedEnemy2 || (enemyImg2.complete ? enemyImg2 : null);
+        else img = processedEnemy || (enemyImg.complete ? enemyImg : null);
+
+        if (img) {
             ctx.drawImage(img, this.x, this.y, this.width, this.height);
         } else {
             ctx.fillStyle = '#ff003c';
@@ -910,7 +915,10 @@ function gameOver() {
     playExplosionSound();
     const exp = new Explosion(expX, expY);
 
-    // Run explosion animation before showing game over menu
+    // Show game over menu exactly 2 seconds after crash
+    setTimeout(() => showGameOverUI(finalScoreInt), 2000);
+
+    // Keep running explosion animation independently
     function runExplosion() {
         ctx.fillStyle = 'rgba(10, 10, 10, 0.25)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -918,8 +926,6 @@ function gameOver() {
         exp.draw();
         if (!exp.done) {
             requestAnimationFrame(runExplosion);
-        } else {
-            showGameOverUI(finalScoreInt);
         }
     }
     requestAnimationFrame(runExplosion);
