@@ -23,7 +23,7 @@ let processedPlayer = null;
 let processedEnemy = null;
 let processedEnemy2 = null;
 
-function processImage(img, removePink = false, crop = false) {
+function processImage(img, removeWhite = false, crop = false) {
     try {
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
@@ -40,12 +40,9 @@ function processImage(img, removePink = false, crop = false) {
             if (r < 25 && g < 25 && b < 25) {
                 data[i+3] = 0;
             }
-            // Remove pink/purple/magenta grid pixels aggressively
-            if (removePink) {
-                // High R+B relative to G = pink/magenta/purple
-                if (r > 50 && b > 50 && g < 60 && (r + b) > (g * 4)) {
-                    data[i+3] = 0;
-                }
+            // Remove near-white/light grey background pixels
+            if (removeWhite && r > 220 && g > 220 && b > 220) {
+                data[i+3] = 0;
             }
         }
         tempCtx.putImageData(imgData, 0, 0);
@@ -67,7 +64,6 @@ function processImage(img, removePink = false, crop = false) {
             }
         }
 
-        // If no visible pixels found, return original
         if (maxX <= minX || maxY <= minY) return tempCanvas;
 
         const cropW = maxX - minX + 1;
@@ -260,6 +256,8 @@ class Enemy {
         this.speed = currentSpeed + (Math.random() * 2 - 1);
         // Randomly pick enemy variant
         this.variant = Math.random() < 0.5 ? 1 : 2;
+        // Extra hitbox shrink for variant 2 to avoid invisible border hits
+        this.hitboxPadding = this.variant === 2 ? 12 : 0;
     }
 
     update(dt) {
@@ -781,9 +779,9 @@ function drawRoad(dt) {
 }
 
 function checkCollision(rect1, rect2) {
-    // Hitbox tweaking for better gameplay (making it slightly smaller than the image)
-    const paddingX = 10;
-    const paddingY = 15;
+    // Base hitbox padding
+    const paddingX = 10 + (rect2.hitboxPadding || 0);
+    const paddingY = 15 + (rect2.hitboxPadding || 0);
 
     return (
         rect1.x + paddingX < rect2.x + rect2.width - paddingX &&
