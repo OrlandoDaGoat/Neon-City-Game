@@ -23,7 +23,7 @@ let processedPlayer = null;
 let processedEnemy = null;
 let processedEnemy2 = null;
 
-function processImage(img, removePink = false) {
+function processImage(img, removePink = false, crop = false) {
     try {
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
@@ -37,25 +37,56 @@ function processImage(img, removePink = false) {
         for (let i = 0; i < data.length; i += 4) {
             const r = data[i], g = data[i+1], b = data[i+2];
             // Remove near-black pixels
-            if (r < 20 && g < 20 && b < 20) {
+            if (r < 25 && g < 25 && b < 25) {
                 data[i+3] = 0;
             }
-            // Remove pink/purple grid pixels (high R/B, low G)
-            if (removePink && r > 80 && g < 30 && b > 80 && r < 200) {
-                data[i+3] = 0;
+            // Remove pink/purple/magenta grid pixels aggressively
+            if (removePink) {
+                // High R+B relative to G = pink/magenta/purple
+                if (r > 50 && b > 50 && g < 60 && (r + b) > (g * 4)) {
+                    data[i+3] = 0;
+                }
             }
         }
         tempCtx.putImageData(imgData, 0, 0);
-        return tempCanvas;
+
+        if (!crop) return tempCanvas;
+
+        // Find bounding box of non-transparent pixels
+        const pixels = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
+        let minX = tempCanvas.width, minY = tempCanvas.height, maxX = 0, maxY = 0;
+        for (let y = 0; y < tempCanvas.height; y++) {
+            for (let x = 0; x < tempCanvas.width; x++) {
+                const alpha = pixels[(y * tempCanvas.width + x) * 4 + 3];
+                if (alpha > 10) {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+        }
+
+        // If no visible pixels found, return original
+        if (maxX <= minX || maxY <= minY) return tempCanvas;
+
+        const cropW = maxX - minX + 1;
+        const cropH = maxY - minY + 1;
+        const cropped = document.createElement('canvas');
+        cropped.width = cropW;
+        cropped.height = cropH;
+        const croppedCtx = cropped.getContext('2d');
+        croppedCtx.drawImage(tempCanvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+        return cropped;
     } catch (e) {
         console.error("Image processing failed (likely CORS/file://):", e);
-        return img; // Fallback to original image
+        return img;
     }
 }
 
 playerImg.onload = () => { processedPlayer = processImage(playerImg); };
 enemyImg.onload = () => { processedEnemy = processImage(enemyImg); };
-enemyImg2.onload = () => { processedEnemy2 = processImage(enemyImg2, true); };
+enemyImg2.onload = () => { processedEnemy2 = processImage(enemyImg2, true, true); };
 
 // Pre-define UI functions at top level to ensure they are available even if later code has issues
 window.startGame = function(difficulty) {
