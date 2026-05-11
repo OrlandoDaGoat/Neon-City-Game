@@ -20,39 +20,94 @@ let processedPlayer = null;
 let processedEnemy = null;
 
 function processImage(img) {
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = img.width;
-    tempCanvas.height = img.height;
-    tempCtx.drawImage(img, 0, 0);
-    
-    const imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-    const data = imgData.data;
-    
-    for (let i = 0; i < data.length; i += 4) {
-        // If pixel is very close to black, make it transparent
-        if (data[i] < 20 && data[i+1] < 20 && data[i+2] < 20) {
-            data[i+3] = 0;
+    try {
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = img.width;
+        tempCanvas.height = img.height;
+        tempCtx.drawImage(img, 0, 0);
+        
+        const imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+        const data = imgData.data;
+        
+        for (let i = 0; i < data.length; i += 4) {
+            // If pixel is very close to black, make it transparent
+            if (data[i] < 20 && data[i+1] < 20 && data[i+2] < 20) {
+                data[i+3] = 0;
+            }
         }
+        tempCtx.putImageData(imgData, 0, 0);
+        return tempCanvas;
+    } catch (e) {
+        console.error("Image processing failed (likely CORS/file://):", e);
+        return img; // Fallback to original image
     }
-    tempCtx.putImageData(imgData, 0, 0);
-    return tempCanvas;
 }
 
 playerImg.onload = () => { processedPlayer = processImage(playerImg); };
 enemyImg.onload = () => { processedEnemy = processImage(enemyImg); };
 
-const bgNeon = new Image();
-bgNeon.src = 'assets/bg_neon.png';
+// Pre-define UI functions at top level to ensure they are available even if later code has issues
+window.startGame = function(difficulty) {
+    // Read map selection
+    const mapSelect = document.getElementById('map-select');
+    currentMap = mapSelect ? mapSelect.value : 'neon';
 
-const bgMiami = new Image();
-bgMiami.src = 'assets/bg_miami.png';
+    // Hide menus
+    startMenu.classList.add('hidden');
+    gameOverMenu.classList.add('hidden');
+    scoreDisplay.style.display = 'block';
 
-const bgRaceTrack = new Image();
-bgRaceTrack.src = 'assets/bg_race_track.png';
+    // Reset State
+    score = 0;
+    frameCount = 0;
+    enemies = [];
+    scoreValue.innerText = score;
+    player = new Player();
 
-// Game State
-let isPlaying = false;
+    // Set difficulty (hierarchical scales)
+    currentDifficultyLevel = difficulty;
+    switch(difficulty) {
+        case 'easy':
+            currentSpeed = 3;
+            spawnRate = 120;
+            break;
+        case 'medium':
+            currentSpeed = 5;
+            spawnRate = 80;
+            break;
+        case 'hard':
+            currentSpeed = 8;
+            spawnRate = 60;
+            break;
+        case 'insane':
+            currentSpeed = 22;
+            spawnRate = 10;
+            break;
+    }
+    
+    isPlaying = true;
+    const uiLayer = document.getElementById('ui-layer');
+    if (uiLayer) uiLayer.style.pointerEvents = 'none';
+    canvas.style.pointerEvents = 'auto';
+    lastTime = 0; // Reset timer for new game
+    requestAnimationFrame(gameLoop);
+}
+
+window.showMainMenu = function() {
+    gameOverMenu.classList.add('hidden');
+    startMenu.classList.remove('hidden');
+    
+    // Update High Score Display
+    document.getElementById('start-high-score').innerText = highScore;
+    
+    // Clear canvas
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const uiLayer = document.getElementById('ui-layer');
+    if (uiLayer) uiLayer.style.pointerEvents = 'auto';
+    canvas.style.pointerEvents = 'none';
+}
 let animationId;
 let score = 0;
 let baseSpeed = 5;
@@ -797,64 +852,6 @@ function gameLoop(currentTime) {
     scoreValue.innerText = Math.floor(score);
 
     animationId = requestAnimationFrame(gameLoop);
-}
-
-window.startGame = function(difficulty) {
-    // Read map selection
-    currentMap = document.getElementById('map-select').value;
-
-    // Hide menus
-    startMenu.classList.add('hidden');
-    gameOverMenu.classList.add('hidden');
-    scoreDisplay.style.display = 'block';
-
-    // Reset State
-    score = 0;
-    frameCount = 0;
-    enemies = [];
-    scoreValue.innerText = score;
-    player = new Player();
-
-    // Set difficulty (hierarchical scales)
-    currentDifficultyLevel = difficulty;
-    switch(difficulty) {
-        case 'easy':
-            currentSpeed = 3;
-            spawnRate = 120;
-            break;
-        case 'medium':
-            currentSpeed = 5;
-            spawnRate = 80;
-            break;
-        case 'hard':
-            currentSpeed = 8;
-            spawnRate = 60;
-            break;
-        case 'insane':
-            currentSpeed = 22;
-            spawnRate = 10;
-            break;
-    }
-    
-    isPlaying = true;
-    document.getElementById('ui-layer').style.pointerEvents = 'none';
-    canvas.style.pointerEvents = 'auto';
-    lastTime = 0; // Reset timer for new game
-    requestAnimationFrame(gameLoop);
-}
-
-window.showMainMenu = function() {
-    gameOverMenu.classList.add('hidden');
-    startMenu.classList.remove('hidden');
-    
-    // Update High Score Display
-    document.getElementById('start-high-score').innerText = highScore;
-    
-    // Clear canvas
-    ctx.fillStyle = '#0a0a0a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    document.getElementById('ui-layer').style.pointerEvents = 'auto';
-    canvas.style.pointerEvents = 'none';
 }
 
 // Initial clear
