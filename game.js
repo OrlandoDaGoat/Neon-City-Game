@@ -73,7 +73,7 @@ window.startGame = function(difficulty) {
             spawnRate = 120;
             break;
         case 'medium':
-            currentSpeed = 10.92; // +40% boost
+            currentSpeed = 13.0; // Specific request
             spawnRate = 80;
             break;
         case 'hard':
